@@ -5,14 +5,14 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ Cấu hình CORS để không bị chặn
+// ✅ Cấu hình CORS để cho phép mọi domain (trong quá trình test)
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Bạn có thể thay * bằng domain cụ thể như 'https://www.matichon.xyz'
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Thay * bằng domain thật nếu muốn chặn
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
 
   next();
@@ -42,21 +42,28 @@ app.post("/capi", async (req, res) => {
       user_data,
       custom_data: {
         ...custom_data,
-        currency: "THB", // ✅ Luôn dùng THB cho thị trường Thái
+        currency: "THB", // Đảm bảo Facebook CAPI hiểu đúng đơn vị tiền
       },
     };
 
     const response = await axios.post(
       `https://graph.facebook.com/v17.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
-      {
-        data: [eventData],
-      }
+      { data: [eventData] }
     );
 
-    res.status(200).json({ success: true, fb_response: response.data });
+    return res.status(200).json({
+      success: true,
+      message: "Event sent to Facebook CAPI successfully",
+      fb_response: response.data,
+    });
   } catch (error) {
-    console.error("❌ CAPI Error:", error?.response?.data || error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Facebook CAPI Error:", error?.response?.data || error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send event to Facebook CAPI",
+      error: error?.response?.data || error.message,
+    });
   }
 });
 

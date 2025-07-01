@@ -5,11 +5,16 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ Cấu hình CORS để tránh bị chặn từ trình duyệt
+// ✅ Cấu hình CORS để không bị chặn
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://www.matichon.xyz");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Bạn có thể thay * bằng domain cụ thể như 'https://www.matichon.xyz'
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
   next();
 });
 
@@ -50,12 +55,9 @@ app.post("/capi", async (req, res) => {
 
     res.status(200).json({ success: true, fb_response: response.data });
   } catch (error) {
-    console.error("❌ Error sending to CAPI:", error.response?.data || error.message);
-    res.status(500).json({ success: false, error: error.response?.data || error.message });
+    console.error("❌ CAPI Error:", error?.response?.data || error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ✅ Start server (Vercel sẽ ignore phần này nhưng vẫn nên có cho local test)
-app.listen(3000, () => {
-  console.log("CAPI Gateway is running on port 3000");
-});
+module.exports = app;

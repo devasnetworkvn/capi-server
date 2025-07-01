@@ -14,22 +14,18 @@ module.exports = async (req, res) => {
 
   res.setHeader("Access-Control-Allow-Origin", "*");
 
-  const {
-    event_name,
-    event_time = Math.floor(Date.now() / 1000),
-    event_source_url,
-    action_source = "website",
-    user_data,
-    custom_data = {},
-  } = req.body;
+  const { event_source_url, action_source, user_data, custom_data } = req.body;
 
   const PIXEL_ID = process.env.PIXEL_ID;
   const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
+  // Lấy timestamp hiện tại
+  const event_time = Math.floor(Date.now() / 1000);
+
   const payload = {
     data: [
       {
-        event_name,
+        event_name: "Purchase",
         event_time,
         event_source_url,
         action_source,
@@ -44,13 +40,17 @@ module.exports = async (req, res) => {
 
   try {
     const fbRes = await axios.post(
-      `https://graph.facebook.com/v17.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
-      payload
+      `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
+      payload,
+      { headers: { "Content-Type": "application/json" } }
     );
 
     res.status(200).json({ success: true, response: fbRes.data });
   } catch (err) {
-    console.error("❌ CAPI Error:", err?.response?.data || err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error("❌ CAPI error:", err?.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      error: err?.response?.data || err.message,
+    });
   }
 };

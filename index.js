@@ -1,35 +1,52 @@
-const express = require('express');
-const axios = require('axios');
-require('dotenv').config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
+require("dotenv").config();
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
-app.post('/capi', async (req, res) => {
-  const event = req.body;
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const PIXEL_ID = process.env.PIXEL_ID;
 
+app.post("/capi", async (req, res) => {
   try {
+    const {
+      event_name,
+      event_time = Math.floor(Date.now() / 1000),
+      event_source_url,
+      action_source = "website",
+      user_data,
+      custom_data = {},
+    } = req.body;
+
+    const eventData = {
+      event_name,
+      event_time,
+      event_source_url,
+      action_source,
+      user_data,
+      custom_data: {
+        ...custom_data,
+        currency: "THB", // 👈 Luôn dùng THB cho thị trường Thái
+      },
+    };
+
     const response = await axios.post(
-      `https://graph.facebook.com/v18.0/${process.env.PIXEL_ID}/events`,
+      `https://graph.facebook.com/v17.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
       {
-        data: [
-          {
-            event_name: event.event_name,
-            event_time: Math.floor(new Date().getTime() / 1000),
-            action_source: "website",
-            user_data: event.user_data,
-            custom_data: event.custom_data || {},
-          }
-        ],
-        access_token: process.env.ACCESS_TOKEN
+        data: [eventData],
       }
     );
-    res.status(200).send(response.data);
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send({ error: "Failed to send event to Facebook" });
+
+    res.json({ success: true, data: response.data });
+  } catch (error) {
+    console.error("CAPI Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 CAPI Gateway running on port ${PORT}`);
+});
